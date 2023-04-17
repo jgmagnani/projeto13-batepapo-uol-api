@@ -52,15 +52,20 @@ app.post("/participants", async (req, res) => {
         return res.status(500).send(err.message);
     }
 
-
-
-
-
-
-
-
 }
 )
+
+app.get("/participants",  (req, res)=>{
+    db.collection("participants").find().toArray().then(dados =>{
+     
+     res.send(dados)
+
+    })
+     .catch((res)=> {
+         return res.status(500).send(err.message);
+     })
+})
+
 
 
 
