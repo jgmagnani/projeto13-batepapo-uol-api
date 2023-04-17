@@ -66,7 +66,65 @@ app.get("/participants",  (req, res)=>{
      })
 })
 
+app.post("/messages", async (req, res)=>{
+    const {to, text, type} = req.body;
+    const name = req.headers.user
 
+
+    try{
+        const schema = joi.object({
+            to: joi.string().required(),
+            text: joi.string().required(),
+            type: joi.valid('message', 'private_message').required()
+        })     
+
+        const findParticipants = await db.collection("participants").findOne({name: name})
+        
+
+        const verification = schema.validate({to, text, type}, {abortEarly: true})
+        if (verification.error || !findParticipants){
+            console.log(verification.error)
+            return res.sendStatus(422)
+        }
+
+        const sanitizedTo = stripHtml(to).result
+        const sanitizedText = stripHtml(text).result
+
+        await db.collection("messages").insertOne({
+            from: name, to: sanitizedTo, text: sanitizedText, type: type, time: time
+            })
+
+        return res.sendStatus(201);
+    }catch(err){
+        return res.status(500).send(err.message);
+    }
+    
+})
+
+app.get("/messages", async (req, res)=>{
+        const user = req.headers.user
+        const limite = req.query.limit      
+        
+        const schema = joi.number().min(1)
+        const validation = schema.validate(limite)
+        if(validation.error) {
+            console.log(validation.error)
+            return res.sendStatus(422)
+        }
+
+        await db.collection("messages").find({}).toArray().then(resp =>{
+            const message = resp.filter(item => item.type === "message" || item.type === "status" || item.type === "private_message" && (item.from === user || item.to === user))
+
+            if(limite){
+            return res.send(message.slice(message.length - limite).reverse()) 
+            }
+
+            res.send(message)
+            }) .catch((res)=> {
+            return res.status(500).send(err.message);
+    })
+
+})
 
 
 
