@@ -126,7 +126,43 @@ app.get("/messages", async (req, res)=>{
 
 })
 
+app.post("/status", async (req, res)=>{
+    const user = req.headers.user
+    const time = dayjs().format("HH:mm:ss");
 
+    try{
+        
+        const findUser = await db.collection("participants").findOne({name: user})
+        if(!findUser) return res.sendStatus(404)
+
+        db.collection("participants").updateOne({name:user}, {$set: {lastStatus: Date.now()}})
+        res.sendStatus(200)
+
+    }catch(err){
+        res.status(500).send(err.message)
+    }
+})
+
+//usuário unitivo
+setInterval(inactiveUser, 15000)
+
+async function inactiveUser(){
+    const now = Date.now()
+   
+
+    try{
+       const user =  await db.collection("participants").findOne({})
+       if(user && user.lastStatus < now - 10000 ){
+        await db.collection("participants").deleteOne({name: user.name})
+        db.collection("messages").insertOne({from: user.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: time})
+        //console.log(`${user.name} deleted`)
+        }
+
+    }catch(error){
+        console.log(error.message)
+    }
+
+}
 
 const port = 5000
 app.listen(port, () => console.log(`Servidor está rodando`));
